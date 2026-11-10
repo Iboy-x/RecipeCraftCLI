@@ -6,6 +6,7 @@ from fractions import Fraction
 
 ROOT_FOLDER = Path(__file__).resolve().parent
 RECIPES_FOLDER = ROOT_FOLDER / "recipes"
+DEMO_MODE = True
 
 
 class RecipeFormatError(ValueError):
@@ -97,9 +98,7 @@ def load_recipe(filename):
     }
 
 
-# ============================================================
 # SECTION 2: RECIPE SCALER
-# ============================================================
 
 # Recognises quantities such as 2, 1.5, and 3/4 at the beginning of a string.
 NUMBER_PATTERN = re.compile(r"^\s*(\d+\s*/\s*\d+|\d+(?:\.\d+)?)(.*)$")
@@ -422,10 +421,12 @@ def ask_restrictions():
 
 
 def display_result(result):
-    """Display the prepared recipe in a readable format."""
+    """Display the basic prepared-recipe workflow for the checkpoint demo."""
     recipe = result["recipe"]
 
     print("\n" + "=" * 58)
+    if DEMO_MODE:
+        print("CHECKPOINT DEMO - BASIC FUNCTIONALITY")
     print(recipe["name"].upper(), "| Servings:", result["target_servings"])
     print("Multiplier:", result["multiplier"], "x")
 
@@ -437,20 +438,6 @@ def display_result(result):
             f"- {ingredient['scaled_quantity']} {ingredient['name']} "
             f"[Substitute available: {flag}]{note}"
         )
-
-    print("\nDIETARY SCREEN:", result["dietary_check"]["status"])
-    conflicts = result["dietary_check"]["possible_conflicts"]
-
-    if conflicts:
-        for conflict in conflicts:
-            print(
-                f"- Possible {conflict['restriction']} conflict: "
-                f"{conflict['ingredient']}"
-            )
-    else:
-        print("- No obvious keyword matches found.")
-
-    print("IMPORTANT: This basic keyword screen is NOT an allergy-safety guarantee.")
 
     print("\nSUBSTITUTION SUGGESTIONS")
     if result["substitutions"]:
@@ -470,9 +457,22 @@ def display_result(result):
     print("=" * 58)
 
 
+def display_error(error):
+    """Show a useful next step without exposing internal implementation details."""
+    if isinstance(error, FileNotFoundError):
+        print("Sorry, that recipe is not available right now.")
+    elif isinstance(error, (ValueError, RecipeFormatError)):
+        print("Sorry, this recipe could not be prepared with those details.")
+    else:
+        print("Sorry, something went wrong while preparing the recipe.")
+    print("Please check your choices and try again.")
+
+
 def main():
     """Run the RecipeCraft command-line application."""
-    print("\nRECIPECRAFT - Smart Recipe Scaling & Substitution")
+    print("\nRECIPECRAFT - Recipe Scaling & Substitution")
+    if DEMO_MODE:
+        print("Checkpoint demo: showing the basic recipe workflow.")
     recipe_files = discover_recipes()
 
     if not recipe_files:
@@ -489,7 +489,7 @@ def main():
             result = prepare_recipe(filename, servings, restrictions)
             display_result(result)
         except (ValueError, FileNotFoundError) as error:
-            print("Could not prepare recipe:", error)
+            display_error(error)
 
         another = input("\nPrepare another recipe? (y/n): ").strip().casefold()
         if another != "y":
